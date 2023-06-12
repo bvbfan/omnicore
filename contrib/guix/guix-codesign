@@ -355,7 +355,7 @@ EOF
                                  --expose="$(git -C "$DETACHED_SIGS_REPO" rev-parse --git-common-dir)" \
                                  ${SOURCES_PATH:+--share="$SOURCES_PATH"} \
                                  --cores="$JOBS" \
-                                 --keep-failed \
+                                 --keep-going \
                                  --fallback \
                                  --link-profile \
                                  --root="$(profiledir_for_host "${HOST}" codesigned)" \

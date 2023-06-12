@@ -1,0 +1,64 @@
+name: Nightly build
+on:
+  push:
+    branches:
+      - develop
+jobs:
+  build_x64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Guix and locales
+        run: |
+          sudo apt install guix
+          guix pull --keep-going --fallback
+          guix package --search-paths -p "${HOME}/.config/guix/current"
+          guix install glibc-locales
+          echo GUIX_PROFILE="${HOME}/.config/guix/current" >> "${GITHUB_ENV}"
+          echo GUIX_LOCPATH="${HOME}/.guix-profile/lib/locale" >> "${GITHUB_ENV}"
+      - name: Checkout
+        uses: actions/checkout@v3.5.3
+      - name: Build packages
+        run: |
+          mkdir -p "$PWD/SDKs"
+          wget https://bitcoincore.org/depends-sources/sdks/Xcode-12.2-12B45b-extracted-SDK-with-libcxx-headers.tar.gz
+          tar -C "$PWD/SDKs" -xaf Xcode-12.2-12B45b-extracted-SDK-with-libcxx-headers.tar.gz
+          export SDK_PATH="$PWD/SDKs"
+          env HOSTS='x86_64-linux-gnu x86_64-w64-mingw32 x86_64-apple-darwin' ${GITHUB_WORKSPACE}/contrib/guix/guix-build
+      - name: Publish builds
+        uses: pyTooling/Actions/releaser@main
+        with:
+          tag: nightly
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            **/*-x86_64-linux-gnu.tar.gz
+            **/*-win64.zip
+            **/*-x86_64-apple-darwin.tar.gz
+
+  build_ARM:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Guix and locales
+        run: |
+          sudo apt install guix
+          guix pull --keep-going --fallback
+          guix package --search-paths -p "${HOME}/.config/guix/current"
+          guix install glibc-locales
+          echo GUIX_PROFILE="${HOME}/.config/guix/current" >> "${GITHUB_ENV}"
+          echo GUIX_LOCPATH="${HOME}/.guix-profile/lib/locale" >> "${GITHUB_ENV}"
+      - name: Checkout
+        uses: actions/checkout@v3.5.3
+      - name: Build packages
+        run: |
+          mkdir -p "$PWD/SDKs"
+          wget https://bitcoincore.org/depends-sources/sdks/Xcode-12.2-12B45b-extracted-SDK-with-libcxx-headers.tar.gz
+          tar -C "$PWD/SDKs" -xaf Xcode-12.2-12B45b-extracted-SDK-with-libcxx-headers.tar.gz
+          export SDK_PATH="$PWD/SDKs"
+          env HOSTS='aarch64-linux-gnu arm64-apple-darwin' ${GITHUB_WORKSPACE}/contrib/guix/guix-build
+      - name: Publish builds
+        uses: pyTooling/Actions/releaser@main
+        with:
+          tag: nightly
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            **/*-aarch64-linux-gnu.tar.gz
+            **/*-arm64-apple-darwin.tar.gz

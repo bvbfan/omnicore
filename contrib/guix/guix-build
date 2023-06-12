@@ -440,7 +440,7 @@ EOF
                                  ${BASE_CACHE:+--share="$BASE_CACHE"} \
                                  ${SDK_PATH:+--share="$SDK_PATH"} \
                                  --cores="$JOBS" \
-                                 --keep-failed \
+                                 --keep-going \
                                  --fallback \
                                  --link-profile \
                                  --root="$(profiledir_for_host "${HOST}")" \
