@@ -4,7 +4,6 @@
  * This file contains RPC calls for creating and sending Omni transactions.
  */
 
-#include <memory>
 #include <omnicore/createpayload.h>
 #include <omnicore/dex.h>
 #include <omnicore/errors.h>
@@ -20,6 +19,7 @@
 #include <omnicore/utilsbitcoin.h>
 #include <omnicore/wallettxbuilder.h>
 
+#include <interfaces/node.h>
 #include <interfaces/wallet.h>
 #include <init.h>
 #include <key_io.h>
@@ -35,8 +35,8 @@
 
 #include <univalue.h>
 
+#include <memory>
 #include <stdint.h>
-#include <stdexcept>
 #include <string>
 
 using namespace mastercore;
@@ -48,6 +48,14 @@ std::pair<std::shared_ptr<CWallet>, std::unique_ptr<interfaces::Wallet>> GetWall
         return {nullptr, nullptr};
     }
     auto& node_context = EnsureAnyNodeContext(request.context);
+    if (false) { // omni standalone application
+        std::string wallet_name;
+        if (!GetWalletNameFromJSONRPCRequest(request, wallet_name)) {
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "Wallet name not found");
+        }
+        extern std::unique_ptr<interfaces::Wallet> MakeOmniWalletInterface(std::unique_ptr<interfaces::Node>, const std::string&);
+        return {nullptr, MakeOmniWalletInterface(interfaces::MakeNode(node_context), wallet_name)};
+    }
     if (!node_context.wallet_loader) {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Wallet loader not found");
     }

@@ -447,7 +447,7 @@ void CoinControlDialog::updateLabels(CCoinControl& m_coin_control, WalletModel *
         {
             CPubKey pubkey;
             PKHash* pkhash = std::get_if<PKHash>(&address);
-            if (pkhash && model->wallet().getPubKey(out.txout.scriptPubKey, ToKeyID(*pkhash), pubkey))
+            if (pkhash && model->wallet().getPubKey(address, pubkey))
             {
                 nBytesInputs += (pubkey.IsCompressed() ? 148 : 180);
             }

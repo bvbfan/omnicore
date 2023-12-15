@@ -85,6 +85,10 @@ bool fAddressIndex = false;
 //! Global lock for state objects
 RecursiveMutex cs_tally;
 
+CFeeRate payTxFee{0};
+CFeeRate fallbackFee{0};
+CFeeRate minTxFee{1000};
+CFeeRate maxTxFee{COIN / 10};
 CFeeRate minRelayTxFee{DUST_RELAY_TX_FEE};
 
 //! Exodus address (changes based on network)
@@ -1440,7 +1444,7 @@ static void ProcessActivations(int blockHeight, const std::vector<activation>& a
  *
  * @return An exit code, indicating success or failure
  */
-int mastercore_init(node::NodeContext& node)
+int mastercore_init(CCoinsViewDB& coinsdb, const CBlockIndex* tip, bool fWipe)
 {
     LOCK(cs_tally);
 
@@ -1463,7 +1467,6 @@ int mastercore_init(node::NodeContext& node)
     }
 
     bool startClean = false;
-    bool fWipe = node::fReindex;
     const auto& data_dir = gArgs.GetDataDirNet();
     // check for --startclean option and delete MP_ folders if present
     if (gArgs.GetBoolArg("-startclean", false)) {
@@ -1537,26 +1540,21 @@ int mastercore_init(node::NodeContext& node)
         DoWarning({strAlert, strAlert});
     }
 
-    {
-        LOCK(node.chainman->GetMutex());
-        auto& activeChain = node.chainman->ActiveChainstate();
-        pCoinsCache = new COmniCoinsCache(activeChain.CoinsDB(), data_dir / "OMNI_coinscache", fWipe);
-        omniValidationInterface = std::make_shared<COmniValidationInterface>();
+    pCoinsCache = new COmniCoinsCache(coinsdb, data_dir / "OMNI_coinscache", fWipe);
+    omniValidationInterface = std::make_shared<COmniValidationInterface>();
 
-        // empty blockchain or prior last record
-        auto tip = activeChain.m_chain.Tip();
-        if (!tip || tip->nHeight < nWaterlineBlock) {
-            nWaterlineBlock = -1;
-        }
+    // empty blockchain or prior last record
+    if (!tip || tip->nHeight < nWaterlineBlock) {
+        nWaterlineBlock = -1;
+    }
 
-        if (nWaterlineBlock < 0) {
-            // persistence says we reparse!, nuke some stuff in case the partial loads left stale bits
-            clear_all_state();
-        }
+    if (nWaterlineBlock < 0) {
+        // persistence says we reparse!, nuke some stuff in case the partial loads left stale bits
+        clear_all_state();
+    }
 
-        if (tip) {
-            omniValidationInterface->Init(tip, nWaterlineBlock);
-        }
+    if (tip) {
+        omniValidationInterface->Init(tip, nWaterlineBlock);
     }
 
     if (nWaterlineBlock >= ConsensusParams().GENESIS_BLOCK - 1) {
@@ -1597,8 +1595,6 @@ int mastercore_init(node::NodeContext& node)
     RegisterSharedValidationInterface(omniValidationInterface);
 
     PrintToConsole("Omni Core initialization completed\n");
-
-    InitWallets(node);
 
     CheckWalletUpdate();
 

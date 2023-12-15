@@ -64,9 +64,6 @@ using node::NodeContext;
 using node::RegenerateCommitments;
 using node::VerifyLoadedChainstate;
 
-extern int mastercore_init(node::NodeContext&);
-extern int mastercore_shutdown();
-
 const std::function<std::string(const char*)> G_TRANSLATION_FUN = nullptr;
 UrlDecodeFn* const URL_DECODE = nullptr;
 
@@ -213,6 +210,7 @@ ChainTestingSetup::~ChainTestingSetup()
     StopScriptCheckWorkerThreads();
     GetMainSignals().FlushBackgroundCallbacks();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
+    extern int mastercore_shutdown();
     mastercore_shutdown();
     m_node.connman.reset();
     m_node.banman.reset();
@@ -247,7 +245,10 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     assert(status == node::ChainstateLoadStatus::SUCCESS);
 
     // initialize Omni after chainstate
-    mastercore_init(m_node);
+    auto& chainstate = m_node.chainman->ActiveChainstate();
+    auto& coinsdb = WITH_LOCK(m_node.chainman->GetMutex(), return chainstate.CoinsDB());
+    extern int mastercore_init(CCoinsViewDB&, const CBlockIndex*, bool);
+    mastercore_init(coinsdb, chainstate.m_chain.Tip(), node::fReindex);
 
     BlockValidationState state;
     if (!m_node.chainman->ActiveChainstate().ActivateBestChain(state)) {

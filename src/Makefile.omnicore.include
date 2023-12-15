@@ -49,6 +49,7 @@ OMNICORE_H = \
 
 OMNICORE_CPP = \
   omnicore/activation.cpp \
+  omnicore/app/walletinterface.cpp \
   omnicore/coinscache.cpp \
   omnicore/consensushash.cpp \
   omnicore/convert.cpp \

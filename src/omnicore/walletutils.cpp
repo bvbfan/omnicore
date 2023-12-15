@@ -11,7 +11,6 @@
 #include <base58.h>
 #include <init.h>
 #include <interfaces/wallet.h>
-#include <node/context.h>
 #include <key_io.h>
 #include <validation.h>
 #include <policy/fees_args.h>
@@ -45,13 +44,7 @@ bool AddressToPubKey(interfaces::Wallet* iWallet, const std::string& key, CPubKe
     // Case 1: Bitcoin address and the key is in the wallet
     CTxDestination dest = DecodeDestination(key);
     if (IsValidDestination(dest)) {
-        CKeyID keyID = iWallet->getKeyForDestination(dest);
-        if (keyID.IsNull()) {
-            PrintToLog("%s: ERROR: redemption address %s does not refer to a public key\n", __func__, key);
-            return false;
-        }
-        CScript script = GetScriptForDestination(dest);
-        if (!iWallet->getPubKey(script, keyID, pubKey)) {
+        if (!iWallet->getPubKey(dest, pubKey)) {
             PrintToLog("%s: ERROR: no public key in wallet for redemption address %s\n", __func__, key);
             return false;
         }
@@ -148,17 +141,13 @@ int IsMyAddress(const std::string& address, interfaces::Wallet* iWallet)
 }
 
 #if ENABLE_WALLET
-static std::function<std::vector<std::shared_ptr<wallet::CWallet>>()> GetWallets;
+static interfaces::WalletLoader* walletLoader = nullptr;
 #endif
 
-void InitWallets(node::NodeContext& node)
+void InitWallets(interfaces::WalletLoader* loader)
 {
 #if ENABLE_WALLET
-    if (auto loader = node.wallet_loader) {
-        if (auto context = loader->context()) {
-            GetWallets = std::bind(wallet::GetWallets, std::ref(*context));
-        }
-    }
+    walletLoader = loader;
 #endif
 }
 
@@ -168,10 +157,10 @@ void InitWallets(node::NodeContext& node)
 bool IsMyAddressAllWallets(const std::string& address)
 {
 #ifdef ENABLE_WALLET
-    if (!GetWallets) return false;
+    if (!walletLoader) return false;
     CTxDestination destination = DecodeDestination(address);
-    for(auto& wallet : GetWallets())
-        if (wallet->IsMine(destination))
+    for(auto& wallet : walletLoader->getWallets())
+        if (wallet->isMine(destination))
             return true;
 #endif
     return false;
@@ -274,6 +263,9 @@ int64_t SelectCoins(interfaces::Wallet& iWallet, const std::string& fromAddress,
             // only use funds from the sender's address
             if (fromAddress == sAddress) {
                 COutPoint outpoint(txid, n);
+                if (coinControl.IsSelected(outpoint)) {
+                    continue;
+                }
                 coinControl.Select(outpoint);
 
                 nTotal += txOut.nValue;

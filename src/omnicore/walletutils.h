@@ -5,20 +5,18 @@ class CPubKey;
 
 namespace interfaces {
 class Wallet;
+class WalletLoader;
 } // namespace interfaces
 
 #include <script/standard.h>
 
 #include <string>
 
+#ifdef ENABLE_WALLET
 namespace wallet {
-class CWallet;
 class CCoinControl;
 }
-
-namespace node {
-class NodeContext;
-}
+#endif
 
 namespace mastercore
 {
@@ -45,7 +43,7 @@ CAmount GetEstimatedFeePerKb(interfaces::Wallet& iWallet);
 int64_t GetEconomicThreshold(interfaces::Wallet& iWallet, const CTxOut& txOut);
 
 /** Init wallets based on node context */
-void InitWallets(node::NodeContext& node);
+void InitWallets(interfaces::WalletLoader* loader);
 
 #ifdef ENABLE_WALLET
 /** Selects spendable outputs to create a transaction. */

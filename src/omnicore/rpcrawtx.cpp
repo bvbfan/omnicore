@@ -3,6 +3,7 @@
 #include <omnicore/rpc.h>
 #include <omnicore/rpctxobject.h>
 #include <omnicore/rpcvalues.h>
+#include <omnicore/utilsbitcoin.h>
 
 #include <coins.h>
 #include <core_io.h>
@@ -23,7 +24,6 @@ using namespace wallet;
 #include <univalue.h>
 
 #include <stdint.h>
-#include <stdexcept>
 #include <string>
 
 #ifdef ENABLE_WALLET
@@ -89,6 +89,8 @@ static UniValue omni_decodetransaction(const JSONRPCRequest& request)
     int blockHeight = 0;
     if (request.params.size() > 2) {
         blockHeight = request.params[2].getInt<int>();
+    } else {
+        blockHeight = mastercore::GetHeight();
     }
 
     UniValue txObj(UniValue::VOBJ);

@@ -96,16 +96,13 @@ public:
     virtual util::Result<CTxDestination> getNewDestination(const OutputType type, const std::string& label) = 0;
 
     //! Get public key.
-    virtual bool getPubKey(const CScript& script, const CKeyID& address, CPubKey& pub_key) = 0;
+    virtual bool getPubKey(const CTxDestination& dest, CPubKey& pub_key) = 0;
 
     //! Sign message
     virtual SigningResult signMessage(const std::string& message, const PKHash& pkhash, std::string& str_sig) = 0;
 
     //! Return whether wallet has private key.
     virtual bool isSpendable(const CTxDestination& dest) = 0;
-
-    //! Get key for destination.
-    virtual CKeyID getKeyForDestination(const CTxDestination& dest) const = 0;
 
     //! Return whether wallet has watch only keys.
     virtual bool haveWatchOnly() = 0;
@@ -158,6 +155,8 @@ public:
         bool omni = false,
         CAmount* required_fee = nullptr) = 0;
 
+    virtual bool signTransaction(CMutableTransaction& tx, const std::map<COutPoint, Coin>& coins, int sighash) = 0;
+
     //! Commit transaction.
     virtual void commitTransaction(CTransactionRef tx,
         WalletValueMap value_map,
@@ -171,9 +170,6 @@ public:
 
     //! Return whether transaction can be bumped.
     virtual bool transactionCanBeBumped(const uint256& txid) = 0;
-
-    /** Produce a script signature using a generic signature creator. */
-    virtual bool produceSignature(const BaseSignatureCreator& creator, const CScript& scriptPubKey, SignatureData& sigdata) = 0;
 
     //! Create bump transaction.
     virtual bool createBumpTransaction(const uint256& txid,

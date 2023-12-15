@@ -65,6 +65,8 @@ public:
     CAmount m_mininum_fee = 0;
     //! Subtract fee from change output used by Omni
     bool m_subtract_fee_from_change = false;
+    //! Selected amount used by Omni
+    CAmount m_selected_amount = 0;
 
     CCoinControl();
 

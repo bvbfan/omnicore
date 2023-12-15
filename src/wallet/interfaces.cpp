@@ -157,27 +157,13 @@ public:
         LOCK(m_wallet->cs_wallet);
         return m_wallet->GetNewDestination(type, label);
     }
-    bool getPubKey(const CScript& script, const CKeyID& address, CPubKey& pub_key) override
+    bool getPubKey(const CTxDestination& dest, CPubKey& pub_key) override
     {
+        auto script = GetScriptForDestination(dest);
         std::unique_ptr<SigningProvider> provider = m_wallet->GetSolvingProvider(script);
         if (provider) {
+            auto address = GetKeyForDestination(*provider, dest);
             return provider->GetPubKey(address, pub_key);
-        }
-        return false;
-    }
-    CKeyID getKeyForDestination(const CTxDestination& dest) const override
-    {
-        auto provider = m_wallet->GetSolvingProvider(GetScriptForDestination(dest));
-        if (provider) {
-            return GetKeyForDestination(*provider, dest);
-        }
-        return CKeyID();
-    }
-    bool produceSignature(const BaseSignatureCreator& creator, const CScript& scriptPubKey, SignatureData& sigdata) override
-    {
-        auto provider = m_wallet->GetSolvingProvider(scriptPubKey);
-        if (provider) {
-            return ProduceSignature(*provider, creator, scriptPubKey, sigdata);
         }
         return false;
     }
@@ -298,6 +284,12 @@ public:
         change_pos = txr.change_pos;
 
         return txr.tx;
+    }
+    bool signTransaction(CMutableTransaction& tx, const std::map<COutPoint, Coin>& coins, int sighash) override
+    {
+        LOCK(m_wallet->cs_wallet);
+        std::map<int, bilingual_str> input_errors;
+        return m_wallet->SignTransaction(tx, coins, sighash, input_errors);
     }
     void commitTransaction(CTransactionRef tx,
         WalletValueMap value_map,

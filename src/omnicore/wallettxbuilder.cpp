@@ -130,6 +130,7 @@ int WalletTxBuilder(
 
         // Ask the wallet to create the transaction (note mining fee determined by Bitcoin Core params)
         int nChangePosInOut = vecRecipients.size();
+        coinControl.m_selected_amount = selected;
         auto result = iWallet->createTransaction(vecRecipients, coinControl, true /* sign */, nChangePosInOut, nFeeRet, false, &nFeeRequired);
 
         if (result.has_value()) {
@@ -418,33 +419,23 @@ int CreateFundedTransaction(
         return MP_ERR_CREATE_TX;
     }
 
-    // sign the transaction
-    int nHashType = SIGHASH_ALL;
-
-    {
-        bool fCoinbase = false;
-        for (size_t i = 0; i < tx.vin.size(); i++) {
-            auto& txin = tx.vin[i];
-            Coin coin;
-            if (!GetCoin(txin.prevout, coin)) {
-                PrintToLog("%s: ERROR: wallet transaction signing failed: input not found or already spent\n", __func__);
-                continue;
-            }
-
-            const auto& out = coin.out;
-
-            SignatureData sigdata;
-            if (!iWallet->produceSignature(MutableTransactionSignatureCreator(tx, i, out.nValue, nHashType), out.scriptPubKey, sigdata)) {
-                PrintToLog("%s: ERROR: wallet transaction signing failed\n", __func__);
-                return MP_ERR_CREATE_TX;
-            }
-
-            UpdateInput(txin, sigdata);
+    std::map<COutPoint, Coin> coins;
+    for (auto& txin : tx.vin) {
+        Coin coin;
+        if (!GetCoin(txin.prevout, coin)) {
+            PrintToLog("%s: ERROR: wallet transaction signing failed: input not found or already spent\n", __func__);
+            continue;
         }
+        coins.emplace(txin.prevout, std::move(coin));
+    }
+
+    // sign the transaction
+    if (!iWallet->signTransaction(tx, coins, SIGHASH_ALL)) {
+        PrintToLog("%s: ERROR: wallet transaction signing failed\n", __func__);
+        return MP_ERR_CREATE_TX;
     }
 
     // send the transaction
-
     CTransactionRef ctx(MakeTransactionRef(std::move(tx)));
     iWallet->commitTransaction(ctx, {}, {});
     retTxid = ctx->GetHash();
@@ -501,6 +492,7 @@ int CreateDExTransaction(interfaces::Wallet* pwallet, const std::string& buyerAd
 
         // Ask the wallet to create the transaction (note mining fee determined by Bitcoin Core params)
         int nChangePosInOut = -1;
+        coinControl.m_selected_amount = selected;
         auto result = pwallet->createTransaction(vecRecipients, coinControl, true /* sign */, nChangePosInOut, nFeeRet, false, &nFeeRequired);
 
         if (result.has_value()) {

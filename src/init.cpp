@@ -142,10 +142,6 @@ static const bool DEFAULT_REST_ENABLE = false;
 
 static const char* DEFAULT_ASMAP_FILENAME="ip_asn.map";
 
-// Omni Core initialization and shutdown handlers
-extern int mastercore_init(node::NodeContext&);
-extern int mastercore_shutdown();
-
 /**
  * The PID file facilities.
  */
@@ -313,6 +309,7 @@ void Shutdown(NodeContext& node)
     }
 
     //! Omni Core shutdown
+    extern int mastercore_shutdown();
     mastercore_shutdown();
 
 #if ENABLE_ZMQ
@@ -1583,7 +1580,11 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         }
     }
 
-    mastercore_init(node);
+    //! Omni Core init
+    auto& chainstate = chainman.ActiveChainstate();
+    auto& coinsdb = WITH_LOCK(chainman.GetMutex(), return chainstate.CoinsDB());
+    extern int mastercore_init(CCoinsViewDB&, const CBlockIndex*, bool);
+    mastercore_init(coinsdb, chainstate.m_chain.Tip(), fReindex);
 
     // ********************************************************* Step 10: data directory maintenance
 

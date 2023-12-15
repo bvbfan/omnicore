@@ -160,6 +160,10 @@ extern std::set<uint32_t> global_wallet_property_list;
 
 extern std::set<std::string> wallet_addresses;
 
+extern CFeeRate minTxFee;
+extern CFeeRate maxTxFee;
+extern CFeeRate payTxFee;
+extern CFeeRate fallbackFee;
 extern CFeeRate minRelayTxFee;
 
 extern bool fOmniSafeAddresses;
@@ -169,11 +173,8 @@ int64_t GetAvailableTokenBalance(const std::string& address, uint32_t propertyId
 int64_t GetReservedTokenBalance(const std::string& address, uint32_t propertyId);
 int64_t GetFrozenTokenBalance(const std::string& address, uint32_t propertyId);
 
-namespace node {
-class NodeContext;
-};
 /** Global handler to initialize Omni Core. */
-int mastercore_init(node::NodeContext& node);
+int mastercore_init(CCoinsViewDB& coinsdb, const CBlockIndex* tip, bool fWipe);
 
 /** Global handler to shut down Omni Core. */
 int mastercore_shutdown();

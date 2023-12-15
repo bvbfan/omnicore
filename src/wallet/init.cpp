@@ -25,6 +25,10 @@
 
 using node::NodeContext;
 
+namespace mastercore {
+extern void InitWallets(interfaces::WalletLoader* loader);
+}
+
 namespace wallet {
 class WalletInit : public WalletInitInterface
 {
@@ -138,6 +142,7 @@ void WalletInit::Construct(NodeContext& node) const
     auto wallet_loader = node.init->makeWalletLoader(*node.chain);
     node.wallet_loader = wallet_loader.get();
     assert(wallet_loader->context());
+    mastercore::InitWallets(node.wallet_loader);
     node.chain_clients.emplace_back(std::move(wallet_loader));
 }
 } // namespace wallet

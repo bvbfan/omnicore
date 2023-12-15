@@ -20,7 +20,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-extern int mastercore_init(node::NodeContext&);
+extern int mastercore_init(CCoinsViewDB&, const CBlockIndex*, bool);
 using node::SnapshotMetadata;
 
 BOOST_FIXTURE_TEST_SUITE(validation_chainstatemanager_tests, ChainTestingSetup)
@@ -77,8 +77,11 @@ BOOST_AUTO_TEST_CASE(chainstatemanager)
     c2.LoadGenesisBlock();
     BlockValidationState _;
     BOOST_CHECK(c2.ActivateBestChain(_, nullptr));
-    // call mastercore init efore ActivateBestChain
-    mastercore_init(m_node);
+
+    // call mastercore init before ActivateBestChain
+    auto& chainstate = manager.ActiveChainstate();
+    auto& coinsdb = WITH_LOCK(manager.GetMutex(), return chainstate.CoinsDB());
+    mastercore_init(coinsdb, chainstate.m_chain.Tip(), node::fReindex);
 
     BOOST_CHECK(manager.IsSnapshotActive());
     BOOST_CHECK(WITH_LOCK(::cs_main, return !manager.IsSnapshotValidated()));
